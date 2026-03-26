@@ -131,7 +131,10 @@ const startServer = async () => {
     app.listen(config.server.port, () => {
       logger.info(`🚀 ReplyGenius AI API server running on port ${config.server.port}`);
       logger.info(`Environment: ${config.server.nodeEnv}`);
-      logger.info(`Allowed origins: ${config.server.allowedOrigins.join(', ')}`);
+      const origins = Array.isArray(config.server.allowedOrigins) 
+        ? config.server.allowedOrigins.join(', ') 
+        : (config.server.allowedOrigins === true ? '*' : config.server.allowedOrigins);
+      logger.info(`Allowed origins: ${origins}`);
     });
     
   } catch (error) {

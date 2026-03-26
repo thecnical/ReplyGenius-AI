@@ -381,7 +381,8 @@ const connectDB = async () => {
     };
     
   } catch (error) {
-    logger.error('MongoDB connection failed:', error.message);
+    logger.error(`MongoDB connection failed: ${error.message}`);
+    if (error.stack) logger.debug(`Connection Error Stack: ${error.stack}`);
     logger.warn('Falling back to in-memory store');
     
     const memoryStore = new MemoryStore();
