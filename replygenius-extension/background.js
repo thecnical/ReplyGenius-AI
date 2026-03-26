@@ -1,171 +1,218 @@
 /**
- * ReplyGenius AI - Background Service Worker
- * Handles background tasks, messaging, and keyboard shortcuts
+ * ReplyGenius AI V2 - Background Service Worker
+ * Handles auth persistence, token refresh, messaging relay, and alarms
  */
 
 // Constants
-const COMMANDS = {
-  GENERATE_REPLY: 'generate-reply'
-};
+const COMMANDS = { GENERATE_REPLY: 'generate-reply' };
+const TOKEN_REFRESH_ALARM = 'rg-token-refresh';
 
-// Message Handler
+// ========================================
+// MESSAGE HANDLER
+// ========================================
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  console.log('Background received message:', message.type);
-  
   switch (message.type) {
     case 'GET_SETTINGS':
       handleGetSettings().then(sendResponse);
       return true;
-      
+
     case 'SAVE_SETTINGS':
       handleSaveSettings(message.data).then(sendResponse);
       return true;
-      
+
     case 'OPEN_POPUP':
-      handleOpenPopup();
+      chrome.action.openPopup?.();
       sendResponse({ success: true });
       return;
-      
+
     case 'NOTIFY':
       handleNotify(message.data);
       sendResponse({ success: true });
       return;
-      
+
+    case 'SET_AUTH_TOKEN':
+      chrome.storage.sync.set({ authToken: message.token }, () => {
+        sendResponse({ success: true });
+      });
+      return true;
+
+    case 'CLEAR_AUTH':
+      chrome.storage.sync.remove(['authToken', 'userData'], () => {
+        sendResponse({ success: true });
+      });
+      return true;
+
+    case 'RELAY_TO_CONTENT':
+      // Relay message from popup to active tab's content script
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        if (tabs[0]) {
+          chrome.tabs.sendMessage(tabs[0].id, message.payload, (response) => {
+            sendResponse(response || { success: false });
+          });
+        }
+      });
+      return true;
+
     default:
-      console.log('Unknown message type:', message.type);
+      break;
   }
 });
 
-// Command Handler
+// ========================================
+// COMMAND HANDLER
+// ========================================
 chrome.commands.onCommand.addListener((command) => {
-  console.log('Command triggered:', command);
-  
   if (command === COMMANDS.GENERATE_REPLY) {
     handleGenerateReplyCommand();
   }
 });
 
-// Tab Handler
-chrome.tabs.onActivated.addListener(async (activeInfo) => {
-  console.log('Tab switched:', activeInfo.tabId);
-});
-
-// Install Handler
+// ========================================
+// INSTALL/STARTUP
+// ========================================
 chrome.runtime.onInstalled.addListener((details) => {
-  console.log('Extension installed:', details.reason);
-  
   if (details.reason === 'install') {
-    // Set default settings
     chrome.storage.sync.set({
       tone: 'professional',
       platform: 'general',
       priority: 'balanced',
       apiUrl: 'https://replygenius-ai.onrender.com',
-      autoSend: false,
-      darkMode: true
+      autoMode: 'manual',
+      personality: null,
+      darkMode: true,
+      voiceEnabled: false
     });
+  }
+
+  // Set up token refresh alarm (every 6 hours)
+  chrome.alarms.create(TOKEN_REFRESH_ALARM, { periodInMinutes: 360 });
+});
+
+chrome.runtime.onStartup.addListener(() => {
+  setBadge('');
+  chrome.alarms.create(TOKEN_REFRESH_ALARM, { periodInMinutes: 360 });
+});
+
+// ========================================
+// ALARM HANDLER (Token Refresh)
+// ========================================
+chrome.alarms.onAlarm.addListener(async (alarm) => {
+  if (alarm.name === TOKEN_REFRESH_ALARM) {
+    await refreshAuthToken();
   }
 });
 
-// Startup Handler
-chrome.runtime.onStartup.addListener(() => {
-  console.log('Extension started');
-});
+async function refreshAuthToken() {
+  try {
+    const { authToken, apiUrl } = await chrome.storage.sync.get(['authToken', 'apiUrl']);
+    if (!authToken) return;
 
-// Settings Handlers
+    const baseUrl = apiUrl || 'https://replygenius-ai.onrender.com';
+    const response = await fetch(`${baseUrl}/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: authToken })
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      if (data.success && data.token) {
+        await chrome.storage.sync.set({ authToken: data.token });
+      }
+    }
+  } catch (refreshError) {
+    console.warn('Token refresh failed:', refreshError.message);
+  }
+}
+
+// ========================================
+// HELPERS
+// ========================================
 async function handleGetSettings() {
   return new Promise((resolve) => {
-    chrome.storage.sync.get(null, (items) => {
-      resolve(items);
-    });
+    chrome.storage.sync.get(null, (items) => resolve(items));
   });
 }
 
 async function handleSaveSettings(settings) {
   return new Promise((resolve) => {
-    chrome.storage.sync.set(settings, () => {
-      resolve({ success: true });
-    });
+    chrome.storage.sync.set(settings, () => resolve({ success: true }));
   });
 }
 
-// Popup Handler
-function handleOpenPopup() {
-  chrome.action.openPopup();
-}
-
-// Notification Handler
 function handleNotify(data) {
   const { title, message, type = 'info' } = data;
-  
-  chrome.notifications.create({
+  chrome.notifications?.create({
     type: 'basic',
     iconUrl: 'icons/icon48.png',
-    title: title || 'ReplyGenius AI',
-    message: message || 'Notification from ReplyGenius AI',
+    title: title || 'ReplyGenius AI V2',
+    message: message || '',
     priority: type === 'error' ? 2 : 1
   });
 }
 
-// Generate Reply Command Handler
 async function handleGenerateReplyCommand() {
   try {
-    // Get current tab
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    
     if (tab) {
-      // Send message to content script to get selected text or input
-      chrome.tabs.sendMessage(tab.id, { type: 'GET_INPUT' }, (response) => {
-        if (chrome.runtime.lastError) {
-          console.log('Could not send message to tab');
-        }
+      chrome.tabs.sendMessage(tab.id, { type: 'GENERATE_FROM_CONTEXT' }, () => {
+        if (chrome.runtime.lastError) { /* tab might not have content script */ }
       });
     }
-  } catch (error) {
-    console.error('Error handling generate reply command:', error);
+  } catch (cmdError) {
+    console.warn('Generate reply command failed:', cmdError.message);
   }
 }
 
-// Context Menu Handler
+// ========================================
+// CONTEXT MENU
+// ========================================
 chrome.contextMenus?.removeAll(() => {
   chrome.contextMenus?.create({
     id: 'replygenius-generate',
-    title: 'Generate Reply with ReplyGenius AI',
+    title: '⚡ Generate Reply with ReplyGenius AI',
     contexts: ['selection', 'editable']
   });
 });
 
 chrome.contextMenus?.onClicked.addListener((info, tab) => {
   if (info.menuItemId === 'replygenius-generate') {
-    chrome.tabs.sendMessage(tab.id, { 
+    chrome.tabs.sendMessage(tab.id, {
       type: 'GENERATE_FROM_CONTEXT',
       text: info.selectionText
     });
   }
 });
 
-// Storage Change Handler
-chrome.storage.onChanged.addListener((changes, areaName) => {
-  console.log('Storage changed:', Object.keys(changes));
-  
-  // Broadcast changes to popup if open
-  chrome.runtime.sendMessage({
-    type: 'SETTINGS_CHANGED',
-    changes: Object.keys(changes)
-  }).catch(() => {
-    // Popup might not be open, ignore error
-  });
+// ========================================
+// STORAGE CHANGE BROADCAST
+// ========================================
+chrome.storage.onChanged.addListener((changes) => {
+  // Notify content scripts of config changes
+  const configKeys = ['tone', 'priority', 'personality', 'autoMode', 'apiEndpoint', 'authToken'];
+  const relevantChanges = {};
+  let hasRelevant = false;
+
+  for (const key of configKeys) {
+    if (changes[key]) {
+      relevantChanges[key] = changes[key].newValue;
+      hasRelevant = true;
+    }
+  }
+
+  if (hasRelevant) {
+    chrome.tabs.query({}, (tabs) => {
+      for (const tab of tabs) {
+        chrome.tabs.sendMessage(tab.id, { type: 'UPDATE_CONFIG', data: relevantChanges }).catch(() => {});
+      }
+    });
+  }
 });
 
-// Badge Handler
+// Badge helper
 function setBadge(text, color = '#00d4ff') {
-  chrome.action.setBadgeText({ text: text });
-  chrome.action.setBadgeBackgroundColor({ color: color });
+  chrome.action.setBadgeText({ text });
+  chrome.action.setBadgeBackgroundColor({ color });
 }
 
-// Clear badge on startup
-chrome.runtime.onStartup.addListener(() => {
-  setBadge('');
-});
-
-console.log('ReplyGenius AI Background Service Worker loaded');
+console.log('⚡ ReplyGenius AI V2 Background Service Worker loaded');

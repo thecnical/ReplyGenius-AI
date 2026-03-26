@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "ReplyGenius AI - Smart One-Click Reply Generator",
-  "version": "1.0.0",
-  "description": "AI-powered browser extension that generates smart replies for LinkedIn, WhatsApp, Gmail, and Twitter/X",
+  "name": "ReplyGenius AI V2 - Smart Communication Assistant",
+  "version": "2.0.0",
+  "description": "AI-powered browser extension with context-aware replies, real-time suggestions, personality system, and professional templates for LinkedIn, WhatsApp, Gmail, Twitter/X, Instagram, and Telegram.",
   "author": "ReplyGenius Team",
   "icons": {
     "16": "icons/icon16.png",
@@ -16,7 +16,7 @@
       "48": "icons/icon48.png",
       "128": "icons/icon128.png"
     },
-    "default_title": "ReplyGenius AI"
+    "default_title": "ReplyGenius AI V2"
   },
   "background": {
     "service_worker": "background.js",
@@ -29,7 +29,9 @@
         "*://web.whatsapp.com/*",
         "*://mail.google.com/*",
         "*://twitter.com/*",
-        "*://x.com/*"
+        "*://x.com/*",
+        "*://*.instagram.com/*",
+        "*://web.telegram.org/*"
       ],
       "js": ["content.js"],
       "run_at": "document_idle"
@@ -39,7 +41,8 @@
     "storage",
     "activeTab",
     "scripting",
-    "tabs"
+    "tabs",
+    "alarms"
   ],
   "host_permissions": [
     "*://*.linkedin.com/*",
@@ -47,6 +50,8 @@
     "*://mail.google.com/*",
     "*://twitter.com/*",
     "*://x.com/*",
+    "*://*.instagram.com/*",
+    "*://web.telegram.org/*",
     "http://localhost:*/*",
     "https://*/*"
   ],

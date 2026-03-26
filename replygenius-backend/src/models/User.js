@@ -1,6 +1,6 @@
 /**
- * ReplyGenius AI - User Model
- * MongoDB schema for user data
+ * ReplyGenius AI V2 - User Model
+ * MongoDB schema for user data with V2 tier system, auth, and memory
  */
 
 const mongoose = require('mongoose');
@@ -33,7 +33,7 @@ const userSchema = new mongoose.Schema({
   },
   plan: {
     type: String,
-    enum: ['free', 'premium'],
+    enum: ['free', 'pro', 'business'],
     default: 'free'
   },
   apiKeys: {
@@ -71,6 +71,16 @@ const userSchema = new mongoose.Schema({
       enum: ['fast', 'balanced', 'premium'],
       default: 'balanced'
     },
+    defaultPersonality: {
+      type: String,
+      enum: ['corporate_pro', 'friendly_buddy', 'sales_closer', 'casual_genz', 'flirty_mode', null],
+      default: null
+    },
+    autoMode: {
+      type: String,
+      enum: ['manual', 'suggestion', 'auto_reply'],
+      default: 'manual'
+    },
     autoSend: {
       type: Boolean,
       default: false
@@ -88,6 +98,10 @@ const userSchema = new mongoose.Schema({
     notifications: {
       type: Boolean,
       default: true
+    },
+    voiceEnabled: {
+      type: Boolean,
+      default: false
     }
   },
   stats: {
@@ -101,6 +115,16 @@ const userSchema = new mongoose.Schema({
     },
     lastActive: {
       type: Date
+    },
+    toneBreakdown: {
+      type: Map,
+      of: Number,
+      default: {}
+    },
+    platformBreakdown: {
+      type: Map,
+      of: Number,
+      default: {}
     }
   },
   stripeCustomerId: {
@@ -109,7 +133,7 @@ const userSchema = new mongoose.Schema({
   },
   subscriptionStatus: {
     type: String,
-    enum: ['active', 'cancelled', 'past_due', 'trialing'],
+    enum: ['active', 'cancelled', 'past_due', 'trialing', 'free'],
     default: 'free'
   },
   referralCode: {
@@ -153,51 +177,85 @@ userSchema.index({ referralCode: 1 });
 userSchema.index({ createdAt: -1 });
 userSchema.index({ 'usage.daily': 1, 'usage.lastReset': 1 });
 
-// Virtual for full name
+// Virtual for display name
 userSchema.virtual('displayName').get(function() {
   return this.name || this.email?.split('@')[0] || 'User';
 });
 
-// Pre-save middleware to update timestamp
-userSchema.pre('save', function(next) {
+// Pre-save: hash password if modified
+userSchema.pre('save', async function(next) {
   this.updatedAt = new Date();
+
+  if (this.isModified('password') && this.password) {
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+  }
+
   next();
 });
 
-// Method to check if user can generate replies
+// Instance method: compare password
+userSchema.methods.comparePassword = async function(candidatePassword) {
+  if (!this.password) return false;
+  return bcrypt.compare(candidatePassword, this.password);
+};
+
+// Instance method: check if user can generate replies
 userSchema.methods.canGenerateReply = function() {
-  // Reset daily usage if it's a new day
   const now = new Date();
   const lastReset = new Date(this.usage.lastReset);
-  
+
   if (now.toDateString() !== lastReset.toDateString()) {
     this.usage.daily = 0;
     this.usage.lastReset = now;
   }
-  
-  const dailyLimit = this.plan === 'premium' ? 1000 : 20;
+
+  const limits = {
+    free: 20,
+    pro: 200,
+    business: 1000
+  };
+  const dailyLimit = limits[this.plan] || 20;
   return this.usage.daily < dailyLimit;
 };
 
-// Method to increment usage
-userSchema.methods.incrementUsage = function() {
+// Instance method: get daily limit for plan
+userSchema.methods.getDailyLimit = function() {
+  const limits = { free: 20, pro: 200, business: 1000 };
+  return limits[this.plan] || 20;
+};
+
+// Instance method: increment usage
+userSchema.methods.incrementUsage = function(tone, platform) {
   this.usage.daily += 1;
   this.usage.total += 1;
   this.stats.repliesGenerated += 1;
   this.stats.lastActive = new Date();
+
+  // Track tone breakdown
+  if (tone) {
+    const current = this.stats.toneBreakdown?.get(tone) || 0;
+    this.stats.toneBreakdown.set(tone, current + 1);
+  }
+
+  // Track platform breakdown
+  if (platform) {
+    const current = this.stats.platformBreakdown?.get(platform) || 0;
+    this.stats.platformBreakdown.set(platform, current + 1);
+  }
 };
 
 // Static method to find or create user
 userSchema.statics.findOrCreate = async function(profile) {
-  let user = await this.findOne({ 
-    provider: profile.provider, 
-    providerId: profile.providerId 
+  let user = await this.findOne({
+    provider: profile.provider,
+    providerId: profile.providerId
   });
-  
+
   if (!user) {
     user = await this.create(profile);
   }
-  
+
   return user;
 };
 

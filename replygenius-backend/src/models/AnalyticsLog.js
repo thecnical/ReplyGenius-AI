@@ -42,7 +42,7 @@ const analyticsSchema = new mongoose.Schema({
   },
   platform: {
     type: String,
-    enum: ['linkedin', 'whatsapp', 'gmail', 'twitter', 'instagram', 'facebook', 'other']
+    enum: ['linkedin', 'whatsapp', 'gmail', 'twitter', 'instagram', 'telegram', 'facebook', 'other']
   },
   tone: {
     type: String

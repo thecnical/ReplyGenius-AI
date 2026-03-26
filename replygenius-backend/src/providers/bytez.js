@@ -1,6 +1,6 @@
 /**
- * ReplyGenius AI - Bytez AI Provider Adapter
- * Fallback provider with open-source models
+ * ReplyGenius AI V2 - Bytez AI Provider Adapter
+ * PRIMARY provider with enhanced context, personality, and memory support
  */
 
 const axios = require('axios');
@@ -23,12 +23,21 @@ class BytezProvider extends BaseProvider {
   }
 
   /**
-   * Generate reply using Bytez AI API
+   * Generate reply using Bytez AI API (V2 with context, personality, memory)
    */
   async generateReply(messages, options = {}) {
-    const { model = this.models.balanced, tone = 'professional', platform = 'linkedin', stream = false } = options;
+    const {
+      model = this.models.balanced,
+      tone = 'professional',
+      platform = 'linkedin',
+      stream = false,
+      contextAnalysis = null,
+      personalityPrompt = null,
+      templateContent = null,
+      userStyle = null
+    } = options;
 
-    const systemPrompt = this._buildSystemPrompt(tone, platform);
+    const systemPrompt = this._buildSystemPromptV2(tone, platform, contextAnalysis, personalityPrompt, templateContent, userStyle);
 
     const formattedMessages = [
       { role: 'system', content: systemPrompt },
@@ -48,7 +57,7 @@ class BytezProvider extends BaseProvider {
       }
     };
 
-    logger.info(`Generating reply with Bytez AI: ${model}`);
+    logger.info(`[PRIMARY] Generating reply with Bytez AI: ${model}`);
 
     return this.withRetry(async () => {
       const response = await axios.post(
@@ -81,9 +90,78 @@ class BytezProvider extends BaseProvider {
   }
 
   /**
-   * Build system prompt
+   * Build enhanced V2 system prompt with context, personality, and memory
    */
-  _buildSystemPrompt(tone, platform) {
+  _buildSystemPromptV2(tone, platform, contextAnalysis, personalityPrompt, templateContent, userStyle) {
+    const parts = [];
+
+    // Base identity
+    parts.push('You are ReplyGenius AI V2, an advanced AI communication assistant that generates smart, context-aware replies.');
+
+    // Personality override (takes priority)
+    if (personalityPrompt?.systemPrompt) {
+      parts.push(`\n[AI Personality: ${personalityPrompt.name}]\n${personalityPrompt.systemPrompt}`);
+    } else {
+      // Default tone instructions
+      parts.push(this._getToneInstruction(tone));
+    }
+
+    // Platform context
+    parts.push(this._getPlatformInstruction(platform));
+
+    // Context analysis insights (V2)
+    if (contextAnalysis) {
+      const ctxParts = [
+        `\n[Conversation Analysis]`,
+        `- Detected intent: ${contextAnalysis.intent}`,
+        `- Detected emotion: ${contextAnalysis.emotion}`,
+        `- Urgency level: ${contextAnalysis.urgency}`,
+        `- Formality: ${contextAnalysis.formality}`
+      ];
+
+      if (contextAnalysis.topics?.length > 0) {
+        ctxParts.push(`- Topics: ${contextAnalysis.topics.join(', ')}`);
+      }
+
+      // Emotion-specific instructions
+      if (contextAnalysis.emotion === 'angry' || contextAnalysis.emotion === 'frustrated') {
+        ctxParts.push(`\n⚠️ The sender appears ${contextAnalysis.emotion}. Respond with empathy, acknowledge their concern, and offer constructive help. Stay calm and professional.`);
+      } else if (contextAnalysis.emotion === 'excited') {
+        ctxParts.push(`\nThe sender is excited! Match their positive energy while keeping the response helpful.`);
+      } else if (contextAnalysis.emotion === 'sad') {
+        ctxParts.push(`\nThe sender seems down. Be empathetic, supportive, and understanding.`);
+      }
+
+      parts.push(ctxParts.join('\n'));
+    }
+
+    // Template base (V2)
+    if (templateContent) {
+      parts.push(`\n[Template Base]\nUse this template as a starting point, customizing it based on the conversation context:\n${templateContent}`);
+    }
+
+    // User style preferences (V2 Memory)
+    if (userStyle) {
+      parts.push(userStyle);
+    }
+
+    // Output instructions
+    parts.push(
+      '\nGenerate 3-5 varied reply suggestions. Format each as a complete, ready-to-send message.',
+      'Keep replies concise and contextually appropriate.'
+    );
+
+    if (personalityPrompt?.formatting?.maxLength) {
+      parts.push(`Keep each reply under ${personalityPrompt.formatting.maxLength} characters.`);
+    }
+
+    return parts.join('\n');
+  }
+
+  /**
+   * Get tone instruction
+   */
+  _getToneInstruction(tone) {
     const toneInstructions = {
       professional: 'Write in a professional, business-appropriate manner.',
       casual: 'Write in a casual, friendly conversational tone.',
@@ -92,19 +170,23 @@ class BytezProvider extends BaseProvider {
       flirty: 'Add a subtle, tasteful flirty undertone.',
       formal: 'Write in a formal, polished, official manner.'
     };
+    return toneInstructions[tone] || toneInstructions.professional;
+  }
 
+  /**
+   * Get platform instruction
+   */
+  _getPlatformInstruction(platform) {
     const platformContext = {
-      linkedin: 'This is a LinkedIn professional message.',
-      whatsapp: 'This is a WhatsApp personal message.',
-      gmail: 'This is a professional email.',
-      twitter: 'This is a Twitter/X direct message.'
+      linkedin: 'This is a LinkedIn professional message. Keep it networking-appropriate.',
+      whatsapp: 'This is a WhatsApp personal message. Keep it conversational.',
+      gmail: 'This is a professional email. Use proper email format.',
+      twitter: 'This is a Twitter/X message. Be concise (280 char limit for tweets).',
+      instagram: 'This is an Instagram DM. Keep it casual and visual.',
+      telegram: 'This is a Telegram message. Conversational but can be longer.',
+      general: 'Adapt your response to be universally appropriate.'
     };
-
-    return `You are ReplyGenius AI, an AI assistant that helps write smart replies.
-${toneInstructions[tone] || toneInstructions.professional}
-${platformContext[platform] || ''}
-Generate 3-5 varied reply suggestions. Format each as a complete, ready-to-send message.
-Keep replies concise and contextually appropriate.`;
+    return platformContext[platform] || platformContext.general;
   }
 
   /**
@@ -112,8 +194,8 @@ Keep replies concise and contextually appropriate.`;
    */
   _parseReplies(content) {
     let replies = content
-      .split(/\n(?=\d+\.|\*\*|\- )/)
-      .map(r => r.replace(/^\d+\.\s*|\*\*\d+\.\*\*|\*\*|\-/g, '').trim())
+      .split(/\n(?=\d+\.|\*\*|- )/)
+      .map(r => r.replaceAll(/(?:^\d+\.\s*|\*\*\d+\.\*\*|\*\*|-)/g, '').trim())
       .filter(r => r.length > 10 && r.length < 500);
 
     if (replies.length === 0) {

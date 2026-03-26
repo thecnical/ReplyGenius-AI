@@ -1,6 +1,6 @@
 /**
- * ReplyGenius AI - Express Application Entry Point
- * Production-ready backend server
+ * ReplyGenius AI V2 - Express Application Entry Point
+ * Production-ready backend server with smart AI, personality, templates, and memory
  */
 
 require('dotenv').config();
@@ -131,9 +131,14 @@ const startServer = async () => {
     app.listen(config.server.port, () => {
       logger.info(`🚀 ReplyGenius AI API server running on port ${config.server.port}`);
       logger.info(`Environment: ${config.server.nodeEnv}`);
-      const origins = Array.isArray(config.server.allowedOrigins) 
-        ? config.server.allowedOrigins.join(', ') 
-        : (config.server.allowedOrigins === true ? '*' : config.server.allowedOrigins);
+      let origins;
+      if (Array.isArray(config.server.allowedOrigins)) {
+        origins = config.server.allowedOrigins.join(', ');
+      } else if (config.server.allowedOrigins === true) {
+        origins = '*';
+      } else {
+        origins = config.server.allowedOrigins;
+      }
       logger.info(`Allowed origins: ${origins}`);
     });
     
