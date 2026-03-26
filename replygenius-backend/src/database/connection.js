@@ -11,14 +11,11 @@ const logger = createLogger('Database');
 
 // Connection options
 const connectionOptions = {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
   maxPoolSize: 10,
   minPoolSize: 2,
   socketTimeoutMS: 45000,
   serverSelectionTimeoutMS: 5000,
-  bufferCommands: false,
-  bufferMaxEntries: 0
+  bufferCommands: false
 };
 
 // Event handlers for MongoDB connection
