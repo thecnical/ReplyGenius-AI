@@ -1,0 +1,69 @@
+{
+  "manifest_version": 3,
+  "name": "ReplyGenius AI - Smart One-Click Reply Generator",
+  "version": "1.0.0",
+  "description": "AI-powered browser extension that generates smart replies for LinkedIn, WhatsApp, Gmail, and Twitter/X",
+  "author": "ReplyGenius Team",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    },
+    "default_title": "ReplyGenius AI"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.linkedin.com/*",
+        "*://web.whatsapp.com/*",
+        "*://mail.google.com/*",
+        "*://twitter.com/*",
+        "*://x.com/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting",
+    "tabs"
+  ],
+  "host_permissions": [
+    "*://*.linkedin.com/*",
+    "*://web.whatsapp.com/*",
+    "*://mail.google.com/*",
+    "*://twitter.com/*",
+    "*://x.com/*",
+    "http://localhost:*/*",
+    "https://*/*"
+  ],
+  "options_page": "options.html",
+  "commands": {
+    "generate-reply": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+G",
+        "mac": "Command+Shift+G"
+      },
+      "description": "Generate AI reply"
+    }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["icons/*", "popup/*"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

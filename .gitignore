@@ -1,0 +1,21 @@
+# Dependency directories
+node_modules/
+replygenius-backend/node_modules/
+
+# Environment files
+.env
+replygenius-backend/.env
+
+# Logs and build artifacts
+logs/
+replygenius-backend/logs/
+dist/
+replygenius-backend/dist/
+
+# Backup zip
+ReplyGenius-AI-v1.0.0.zip
+
+# System files
+nul
+.DS_Store
+Thumbs.db

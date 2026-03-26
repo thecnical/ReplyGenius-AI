@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ReplyGenius AI</title>
+  <link rel="stylesheet" href="popup/popup.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="header">
+      <div class="logo-section">
+        <div class="logo-icon">
+          <span class="logo-glow"></span>
+          <span class="logo-text">⚡</span>
+        </div>
+        <div class="logo-info">
+          <h1>ReplyGenius AI</h1>
+          <span class="version">v1.0.0</span>
+        </div>
+      </div>
+      <div class="header-actions">
+        <div class="status-badge" id="statusBadge">
+          <span class="status-dot"></span>
+          <span class="status-label">Ready</span>
+        </div>
+        <button class="settings-btn" id="settingsBtn" title="Settings">⚙️</button>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Input Section -->
+      <section class="input-section">
+        <div class="section-header">
+          <label class="section-title">Your Message</label>
+          <span class="char-count" id="charCount">0/500</span>
+        </div>
+        <textarea 
+          id="messageInput" 
+          class="message-input" 
+          placeholder="Type your message or paste the message you want to reply to..."
+          maxlength="500"
+          rows="4"
+        ></textarea>
+        <div class="input-actions">
+          <button class="clear-btn" id="clearBtn" title="Clear">🗑️ Clear</button>
+        </div>
+      </section>
+
+      <!-- Tone & Platform Selector -->
+      <section class="options-section">
+        <div class="option-group">
+          <label class="option-label">
+            <span class="option-icon">🎭</span>
+            Tone
+          </label>
+          <div class="select-wrapper">
+            <select id="toneSelect" class="option-select">
+              <option value="professional">💼 Professional</option>
+              <option value="casual">😎 Casual</option>
+              <option value="friendly">😊 Friendly</option>
+              <option value="funny">😂 Funny</option>
+              <option value="flirty">🥂 Flirty</option>
+              <option value="formal">🎩 Formal</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="option-group">
+          <label class="option-label">
+            <span class="option-icon">📱</span>
+            Platform
+          </label>
+          <div class="select-wrapper">
+            <select id="platformSelect" class="option-select">
+              <option value="general">🌐 General</option>
+              <option value="linkedin">💼 LinkedIn</option>
+              <option value="whatsapp">💬 WhatsApp</option>
+              <option value="gmail">📧 Gmail</option>
+              <option value="twitter">🐦 Twitter/X</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="option-group">
+          <label class="option-label">
+            <span class="option-icon">⚡</span>
+            Speed
+          </label>
+          <div class="select-wrapper">
+            <select id="prioritySelect" class="option-select">
+              <option value="fast">🚀 Fast</option>
+              <option value="balanced" selected>⚖️ Balanced</option>
+              <option value="premium">💎 Premium</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <!-- Generate Button -->
+      <button class="generate-btn" id="generateBtn">
+        <span class="btn-content">
+          <span class="btn-icon">✨</span>
+          <span class="btn-text">Generate Reply</span>
+        </span>
+        <span class="btn-glow"></span>
+      </button>
+
+      <!-- Loading State -->
+      <div class="loading-section" id="loadingSection">
+        <div class="loading-spinner">
+          <div class="spinner-ring"></div>
+          <div class="spinner-ring"></div>
+          <div class="spinner-ring"></div>
+        </div>
+        <div class="loading-content">
+          <span class="loading-title">Generating replies...</span>
+          <span class="loading-subtitle" id="loadingSubtitle">Connecting to AI</span>
+        </div>
+        <div class="loading-progress">
+          <div class="progress-bar" id="progressBar"></div>
+        </div>
+      </div>
+
+      <!-- Results Section -->
+      <section class="results-section" id="resultsSection">
+        <div class="results-header">
+          <div class="results-title">
+            <span class="results-icon">💡</span>
+            <span>AI Suggestions</span>
+            <span class="results-count" id="resultsCount">(0)</span>
+          </div>
+          <div class="results-actions">
+            <button class="action-icon-btn" id="copyAllBtn" title="Copy All">📋</button>
+            <button class="action-icon-btn" id="refreshBtn" title="Regenerate">🔄</button>
+          </div>
+        </div>
+
+        <div class="replies-carousel" id="repliesCarousel">
+          <div class="replies-track" id="repliesTrack">
+            <!-- Reply cards will be inserted here -->
+          </div>
+        </div>
+
+        <div class="carousel-nav">
+          <button class="carousel-btn prev" id="prevBtn">‹</button>
+          <div class="carousel-dots" id="carouselDots"></div>
+          <button class="carousel-btn next" id="nextBtn">›</button>
+        </div>
+
+        <!-- Selected Reply Preview -->
+        <div class="selected-preview" id="selectedPreview">
+          <div class="preview-label">Selected Reply:</div>
+          <div class="preview-content" id="previewContent">
+            Click a suggestion above to select
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="results-actions-main">
+          <button class="secondary-btn" id="editBtn">
+            <span>✏️</span> Edit
+          </button>
+          <button class="primary-btn" id="useReplyBtn">
+            <span>📝</span> Use This Reply
+          </button>
+        </div>
+      </section>
+
+      <!-- Error Display -->
+      <div class="error-section" id="errorSection">
+        <div class="error-icon">⚠️</div>
+        <div class="error-content">
+          <span class="error-title">Something went wrong</span>
+          <span class="error-message" id="errorMessage">Please try again</span>
+        </div>
+        <button class="retry-btn" id="retryBtn">Try Again</button>
+      </div>
+
+      <!-- History Preview -->
+      <section class="history-preview" id="historyPreview">
+        <div class="history-header">
+          <span class="history-icon">📜</span>
+          <span>Recent Replies</span>
+          <button class="view-all-btn" id="viewAllHistoryBtn">View All →</button>
+        </div>
+        <div class="history-list" id="historyList">
+          <!-- History items will be inserted here -->
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="footer-stats">
+        <span class="stat-item">
+          <span class="stat-icon">🔥</span>
+          <span class="stat-value" id="repliesToday">0</span>
+          <span class="stat-label">Today</span>
+        </span>
+        <span class="stat-item">
+          <span class="stat-icon">⭐</span>
+          <span class="stat-value" id="favoritesCount">0</span>
+          <span class="stat-label">Favorites</span>
+        </span>
+      </div>
+      <div class="footer-links">
+        <button class="footer-btn" id="historyBtn">📜 History</button>
+        <button class="footer-btn" id="helpBtn">❓ Help</button>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Settings Modal -->
+  <div class="modal-overlay" id="settingsModal">
+    <div class="modal-content settings-modal">
+      <div class="modal-header">
+        <h2>⚙️ Settings</h2>
+        <button class="modal-close" id="closeSettingsBtn">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="settings-group">
+          <label class="settings-label">API Endpoint</label>
+          <input type="text" id="apiEndpoint" class="settings-input" placeholder="http://localhost:3000">
+        </div>
+        
+        <div class="settings-group">
+          <label class="settings-label">Default Tone</label>
+          <select id="defaultTone" class="settings-select">
+            <option value="professional">Professional</option>
+            <option value="casual">Casual</option>
+            <option value="friendly">Friendly</option>
+            <option value="funny">Funny</option>
+            <option value="flirty">Flirty</option>
+            <option value="formal">Formal</option>
+          </select>
+        </div>
+
+        <div class="settings-group">
+          <label class="settings-label">Default Priority</label>
+          <select id="defaultPriority" class="settings-select">
+            <option value="fast">Fast</option>
+            <option value="balanced">Balanced</option>
+            <option value="premium">Premium</option>
+          </select>
+        </div>
+
+        <div class="settings-toggles">
+          <label class="toggle-item">
+            <span>Auto-copy to clipboard</span>
+            <input type="checkbox" id="autoCopy" class="toggle-input">
+            <span class="toggle-slider"></span>
+          </label>
+          <label class="toggle-item">
+            <span>Show streaming animation</span>
+            <input type="checkbox" id="showStreaming" class="toggle-input" checked>
+            <span class="toggle-slider"></span>
+          </label>
+          <label class="toggle-item">
+            <span>Sound effects</span>
+            <input type="checkbox" id="soundEffects" class="toggle-input">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="secondary-btn" id="resetSettingsBtn">Reset</button>
+        <button class="primary-btn" id="saveSettingsBtn">Save Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- History Modal -->
+  <div class="modal-overlay" id="historyModal">
+    <div class="modal-content history-modal">
+      <div class="modal-header">
+        <h2>📜 Reply History</h2>
+        <button class="modal-close" id="closeHistoryBtn">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="history-filters">
+          <input type="text" id="historySearch" class="history-search" placeholder="Search replies...">
+          <select id="historyFilter" class="history-filter">
+            <option value="all">All</option>
+            <option value="favorites">⭐ Favorites</option>
+            <option value="linkedin">💼 LinkedIn</option>
+            <option value="whatsapp">💬 WhatsApp</option>
+            <option value="gmail">📧 Gmail</option>
+          </select>
+        </div>
+        <div class="history-items" id="historyItems">
+          <!-- History items will be inserted here -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="popup/popup.js"></script>
+</body>
+</html>
