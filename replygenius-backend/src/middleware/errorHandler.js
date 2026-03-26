@@ -52,10 +52,10 @@ const errorHandler = (err, req, res, next) => {
 
   if (err.type === 'validation' || err.name === 'ValidationError') {
     logger.warn(`Validation error: ${err.message}`, errorLog);
-  } else if (err.statusCode >= 500) {
-    logger.error(`Server error: ${err.message}`, errorLog);
   } else {
-    logger.warn(`Client error: ${err.message}`, errorLog);
+    // Log all non-validation errors as errors to see them in production
+    logger.error(`[INTERNAL_ERROR] ${err.message}`, errorLog);
+    if (err.stack) logger.debug(`Stack Trace: ${err.stack}`);
   }
 
   const errorInfo = err.errorType || ErrorTypes.UNKNOWN_ERROR;
