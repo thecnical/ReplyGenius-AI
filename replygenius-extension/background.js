@@ -60,7 +60,7 @@ chrome.runtime.onInstalled.addListener((details) => {
       tone: 'professional',
       platform: 'general',
       priority: 'balanced',
-      apiUrl: 'http://localhost:3000',
+      apiUrl: 'https://replygenius-ai.onrender.com',
       autoSend: false,
       darkMode: true
     });

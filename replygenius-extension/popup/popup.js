@@ -10,7 +10,9 @@
   // CONFIGURATION
   // ========================================
   const CONFIG = {
-    API_BASE: 'http://localhost:3000',
+    // Production: https://replygenius-ai.onrender.com
+    // Development: http://localhost:3000
+    API_BASE: 'https://replygenius-ai.onrender.com',
     ENDPOINTS: {
       GENERATE_REPLY: '/api/generate-reply',
       MODELS: '/api/models',

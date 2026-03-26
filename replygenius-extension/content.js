@@ -8,7 +8,9 @@
 
   // Configuration - will be updated from storage
   let CONFIG = {
-    API_URL: 'http://localhost:3000/api/generate-reply',
+    // Production: https://replygenius-ai.onrender.com/api/generate-reply
+    // Development: http://localhost:3000/api/generate-reply
+    API_URL: 'https://replygenius-ai.onrender.com/api/generate-reply',
     DEFAULT_TONE: 'professional',
     DEFAULT_PRIORITY: 'balanced',
     BUTTON_TEXT: '⚡ Reply',

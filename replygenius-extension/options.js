@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
 async function loadSettings() {
   const result = await chrome.storage.sync.get(null);
   
-  document.getElementById('apiUrl').value = result.apiUrl || 'http://localhost:3000';
+  document.getElementById('apiUrl').value = result.apiUrl || 'https://replygenius-ai.onrender.com';
   document.getElementById('defaultTone').value = result.tone || 'professional';
   document.getElementById('defaultPriority').value = result.priority || 'balanced';
 }
