@@ -362,9 +362,9 @@ const connectDB = async () => {
     
     logger.info('Connecting to MongoDB...');
     
-    const connection = await mongoose.connect(uri, connectionOptions);
+    await mongoose.connect(uri, connectionOptions);
     
-    setupConnectionHandlers(connection);
+    setupConnectionHandlers(mongoose.connection);
     
     logger.info(`MongoDB connected to: ${uri.split('@')[1] || 'local'}`);
     
